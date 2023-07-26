@@ -1,12 +1,3 @@
-# GROUP -04
-# Contributions made by:
-# Dhruv Chowdary (MBAA22025)
-# Harshita Rathore MBAA22030
-# Monica Sri D (MBAA22038)
-# Nidhi Chaudhary MBAA22039
-# Priyanka (MBAA22054)
-# Jakkapu Sravanthi (MBAA22086)
-
 # -------------------------------------------------------------- Importing necessary libraries -----------------------------------------------------------------------
 
 library(dplyr)
