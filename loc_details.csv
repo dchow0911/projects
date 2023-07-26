@@ -1,0 +1,7 @@
+﻿name,location,numeric,latitude,longitude,departure_count,arrival_count
+Bangalore,"https://www.google.com/maps/?q=12.9719,77.5937",1,12.9719,77.5937,1665,1538
+Chennai,"https://www.google.com/maps/?q=13.0878,80.2785",2,13.0878,80.2785,1198,1271
+Delhi,"https://www.google.com/maps/?q=28.652,77.2315",3,28.652,77.2315,1804,1609
+Hyderabad,"https://www.google.com/maps/place/?q=17.4126274,78.267958",4,17.4126274,78.267958,1226,1375
+Kolkata,"https://www.google.com/maps/?q=22.5626,88.363",5,22.5626,88.363,1248,1415
+Mumbai,"https://www.google.com/maps/?q=19.0728,72.8826",6,19.0728,72.8826,1904,1837
