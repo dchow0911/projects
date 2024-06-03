@@ -1,0 +1,1231 @@
+---
+title: "Course Project"
+subtitle: "Advanced Data Analysis Course"
+author: "Dhruv Chowdary"
+date: "`r lubridate::today()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    number_sections: false
+    code_folding: hide
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(include = FALSE)
+
+library(tidyverse)
+library(kableExtra)
+
+options(scipen=999) #Disable scientific notation
+options(warn = -1)  # Suppress all warnings
+
+# Importing necessary Libraries
+library(tidyverse) 
+library(tidymodels)
+library(janitor)
+library(lubridate)
+library(dplyr)
+library(ggplot2)
+library(glmnet)
+library(caret)
+library(ROCR)
+library(ggpubr)
+library(nnet)
+library(MASS)
+library(pscl)
+library(rpart)
+library(tree)
+library(psych)
+library(rpart.plot)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(pROC)
+
+# Setting up the seed
+set.seed(1221)
+```
+
+<style>
+div.output_html {
+  max-height: 300px;
+  overflow-y: auto;
+}
+</style>
+
+# Data Description
+
+
+A large Indian retail chain has stores across 3 states in India: Maharashtra, Telangana and Kerala. These stores stock products across various categories such as FMCG (fast moving consumer goods), eatables / perishables and others. Managing the inventory is crucial for the revenue stream of the retail chain. Meeting the demand is important to not lose potential revenue, while at the same time stocking excessive products could lead to losses.
+
+ 
+
+The information provided above, along with all essential data files, was collected from [kaggle.com](https://www.kaggle.com/datasets/mragpavank/predicting-the-sales-of-products-of-a-retail-chain). These data files have been organized within the *data* subfolder located under the project folder.
+
+
+Variables in `train_data.csv`:
+
+- `date` : The date for which the observation was recorded
+
+- `product_identifier` : The id for a product
+
+- `department_identifier` : The id for a specific department in a store
+
+- `category_of_product` : The category to which a product belongs
+
+- `outlet` : The id for a store
+
+- `state` : The name of the state
+
+- `sales` : The number of sales for the product
+
+Auxiliary Datasets:
+
+- `product_prices.csv` : The prices of products at each store for each week
+
+- `date_to_week_id_map.csv` : The mapping from a date to the week_id
+
+
+# Problem Statement
+
+Showcase **at least five** regression techniques for predicting sales. Determine which method performs better and explain why it is superior.
+
+The process you should follow to obtain these results involves a structured pipeline consisting of Exploratory Data Analysis (EDA), preprocessing, model building, and an evaluation strategy. Additionally, interpret model(s) such a way that illustrate which variables affect sales.
+
+# Solution
+
+
+## Loading the data
+```{r load_data, echo=TRUE, include=TRUE}
+# Loading Data
+data <- read.csv("C:/Users/chowd/My Drive/Term-5 Classes/Advanced Data Analysis/course-project/data/train_data.csv")
+price <- read.csv("C:/Users/chowd/My Drive/Term-5 Classes/Advanced Data Analysis/course-project/data/product_prices.csv")
+dtw <- read.csv("C:/Users/chowd/My Drive/Term-5 Classes/Advanced Data Analysis/course-project/data/date_to_week_id_map.csv")
+```
+
+After loading our necessary libraries and and setting the seed value to 1221 (provided to Group-12), we load our data. Our data are stored as .csv files. 
+
+We have three csv files - `train_data.csv`, `product_prices.csv`, `date_to_week_id_map.csv`
+
+We have loaded these csv files in data frames, namely, **data**, **price** and **dtw**, respectively
+
+
+
+
+## Data Preparation
+
+### Data Understanding
+
+Before preparing and pre-processing our data, we must understand the structure of the data and check if there are any missing values to be handled. If we find any missing values in our data, we must check the type of missing (MCAR, MAR and MNAR) and handle them with various imputation techniques.
+
+#### Train Data
+
+
+```{r data_structure, echo=TRUE, include=TRUE}
+# Analyzing the Structure
+str(data) 
+```
+
+The output helps us understand the structure of data frame **"data"** with 395,000 observations (rows) and 7 variables (columns). The following is an interpretation of each variable:
+
+- **date**: This variable is of character type (chr), and it represents the date of the observation. The date seems to be in the format "DD-MM-YYYY" (01-01-2012 in the example).
+
+- **product_identifier**: This variable is of integer type (int), and it contains numerical identifiers for products.
+
+- **department_identifier**: This variable is of integer type (int), and it contains numerical identifiers for departments.
+
+- **category_of_product**: This variable is of character type (chr), and it represents the category of the product. In the example, all entries seem to be labeled as "others."
+
+- **outlet**: This variable is of integer type (int), and it contains numerical identifiers for outlets.
+
+- **state**: This variable is of character type (chr), and it represents the state associated with the observation.
+
+- **sales**: This variable is of integer type (int), and it represents the sales for each observation.
+
+
+```{r data missing check, echo=TRUE, include=TRUE}
+# Checking for Missing Values
+any(is.na(data))
+```
+
+Based on the output we can conclude that the dataset **data** does not contain any missing values.
+
+
+#### Product Prices Data
+
+```{r price_structure, echo=TRUE, include=TRUE}
+# Analyzing the Structure
+str(price) 
+```
+
+The output helps us understand the structure of data frame **"price"** with 59,000 observations (rows) and 4 variables (columns). The following is an interpretation of each variable:
+
+- **outlet**: This variable is of integer type (int), and it represents numerical identifiers for outlets. Each observation is associated with a specific outlet.
+
+- **product_identifier**: This variable is of integer type (int), and it contains numerical identifiers for products. 
+
+- **week_id**: This variable is of integer type (int), and it represents the week identifier. The values suggest that the data spans multiple weeks, with each observation corresponding to a specific week.
+
+- **sell_price**: This variable is of numeric type (num), and it represents the sell price of the product. 
+
+
+```{r price missing check, echo=TRUE, include=TRUE}
+# Checking for Missing Values
+any(is.na(price))
+```
+
+Based on the output we can conclude that the data set **price** does not contain any missing values.
+
+
+#### Date to Week id Data
+
+```{r dtw_structure, echo=TRUE, include=TRUE}
+# Analyzing the Structure
+str(dtw) 
+```
+
+The output helps us understand the structure of data frame **"dtw"** with 821 observations (rows) and 2 variables (columns). The following is an interpretation of each variable:
+
+- **date**: This variable is of character type (chr), and it represents the date of the observations. The date is in the format "DD-MM-YYYY".
+
+- **week_id**: This variable is of integer type (int), and it represents the week identifier. The values in this column suggest that the data spans multiple weeks, with each observation associated with a specific week.
+
+
+```{r dtw missing check, echo=TRUE, include=TRUE}
+# Checking for Missing Values
+any(is.na(dtw))
+```
+
+Based on the output we can conclude that the dataset **dtw** does not contain any missing values.
+
+
+### Data Preprocessing
+
+#### Type Conversion
+```{r type_conversion, echo=FALSE, include=TRUE, results='hide'}
+dmy(data$date, format = "%d-%m-%Y")
+dmy(dtw$date, format = "%d-%m-%Y")
+```
+
+This line is using the **dmy** function to parse the **"date"** column from the `data` and `dtw` data frames. It assumes that the date is in the "DD-MM-YYYY" format, and it converts the character representations of dates into the corresponding Date objects. The resulting output would be a vector of Date objects.
+
+
+#### Data Transformation
+```{r Data Transformation, echo=TRUE, include=TRUE}
+merged_data <- data %>%
+  left_join(dtw, by = "date") %>%
+  left_join(price,by = c("product_identifier" = "product_identifier", "outlet" = "outlet", "week_id" = "week_id")) %>%
+  mutate(revenue = sales * sell_price) %>%
+  mutate(sales_cat = cut(sales,
+                         breaks = c(-Inf, 0, 10, Inf),
+                         labels = c("Zero Sales", "NonZero Sales below 10", "Sales above 10")),
+         sales_kind = ifelse(sales_cat == "Zero Sales", 0, 1)) %>%
+  mutate(sales_kind = as.integer(sales_kind)) %>%
+  mutate(day_of_week = weekdays(as.Date(date))) %>%
+  mutate(date = as.Date(date, format = "%d-%m-%y"))
+
+head(merged_data, 10)
+```
+
+We create a new dataframe called `merged_data` to keep the raw datasets untouched. 
+
+First, we combine all the raw datasets using the **join** functions. The **dtw** and **price** dataframes are merged with **data** dataframe using `left_join`.
+
+**dtw** is joined to **data** with the reference of `date` column in both these datasets and the `week_id` is now added in the `merged_data`
+
+After this, we join the **price** dataframe with **data** dataframe based on the `product_identifier`, `outlet` and `week_id` columns in these two dataframes and the `sell_price` feature is now added to the `merged_data` dataframe.
+
+Using `mutate` we also create few more features like `revenue` and `day_of_week` to enhance our visualizations and also use `day_of_week` as one of the predictors in our models.
+
+Using the existing `sales` feature, we create two new variables - `sales_cat` and `sales_kind`. These two variables are created to improve the possibilities of more regression models for our solution framework.
+
+The `sales_cat` variable is created to use it as an outcome for the **Multinomial Regression** model and the `sales_kind` is used as an outcome variable for **Logistic Regression** model. 
+
+
+##### Understanding the Created Sales Variables
+```{r sales variables1, echo=TRUE, include=TRUE}
+merged_data %>%
+  group_by(sales_cat) %>%
+  summarize(mean_sales = mean(sales), count = n())
+```
+
+**Interpretation**:
+
+- The summary provides insights into the distribution of sales across different categories.
+
+- The "Zero Sales" category is the most frequent, with a mean sales value of 0, indicatingthat a large number of observations have zero sales. There are 246,622 observations in the "Zero Sales" category.
+
+- The "NonZero Sales below 10" category has a mean sales value of 2.46, suggesting that, on average, sales in this category are relatively low.There are 141,475 observations in the "NonZero Sales below 10" category.
+
+- The "Sales above 10" category has a higher mean sales value of 19.9, indicating that, on average, sales in this category are higher than the other two categories. There are 6,903 observations in the "Sales above 10" category.
+
+
+```{r sales variables2, echo=TRUE, include=TRUE}
+merged_data %>%
+  group_by(sales_kind) %>%
+  summarize(mean_sales = mean(sales), count = n())
+```
+
+**Interpretation**:
+
+- The "0" kind is the most frequent, with a mean sales value of 0, indicatingthat a large number of observations have zero sales. There are 246,622 observations in the "0" category.
+
+- The "1" kind has a mean sales value of 3.27, suggesting that, on average, sales in this category are relatively low.There are 148,378 observations in the "1" category.
+
+
+```{r merge data missing check, echo=TRUE, include=TRUE}
+# Checking for Missing Values
+any(is.na(merged_data))
+```
+
+Based on the output we can conclude that the dataset **merged_data** does not contain any missing values.
+
+
+#### Data Factoring
+
+```{r Data Factoring, echo=TRUE, include=TRUE}
+columns_to_factor <- c("day_of_week","department_identifier","category_of_product","state","product_identifier", "outlet", "week_id", "sales_cat")
+
+# Convert specified columns to factors
+merged_data <- merged_data %>%
+  mutate(across(all_of(columns_to_factor), as.factor))
+# Check levels of categorical variables
+sapply(merged_data[, sapply(merged_data, is.factor)], levels)
+```
+
+We factor a few columns or variables of our **`merged_data`** dataframe. These columns are `day_of_week`, `department_identifier`,  `category_of_product`,  `state`, `product_identifier`, `outlet`, `week_id` and `sales_cat`.
+
+These columns are factored to prepare them as input (predictor or outcome) for our regression models as most of these columns use numbers as their values and these numbers are nominal in nature and are used as ids to identify certain objects. The character columns when converted into factors make them usable for our regression models as character datatype variables in general cannot be used in any of the regression models.
+
+
+
+
+## Exploratory Data Analytics
+
+
+### Descriptive Analytics
+```{r summary, echo=TRUE, include=TRUE}
+summary(merged_data)
+```
+
+**Interpretation**:
+
+
+- **Date Information**:
+
+    a. The date ranges from January 1, 2020, to December 31, 2020.
+    
+    b. The summary includes quartiles and other descriptive statistics for the "date" variable.
+
+
+- **Product and Department Information**:
+
+    a. The most common product identifier (in the summary displayed) is 74, with 7,900 occurrences.
+    
+    b. The summary provides information about the distribution of product identifiers and department identifiers.
+    
+    c. The department with 22 in the department_identifier column represents 134,300 occurrences, which is the most in the summary displayed
+
+
+- **Category of Product Information**:
+
+    a. The most common category of product is "fast_moving_consumer_goods" with 229,100 occurrences.
+    
+    b. The summary provides information about the distribution of categories of products.
+
+
+- **Outlet and State Information**:
+        
+    a. Each outlet shares 39500 transactions (in the summery displayed).
+        
+    b. The most common state is Maharashtra with 158,000 occurrences.
+    
+    c. The summary provides information about the distribution of outlets and states.
+
+
+- **Sales Information**:
+        
+    a. Sales vary from a minimum of 0 to a maximum of 293.
+
+    b. The mean (average) sales value is 1.229, and other descriptive statistics are provided.
+
+    c. The summary provides information about the distribution of sales.
+
+    
+- **Week and Price Information**:
+        
+    a. All the Week_ids have equal number of transactions (3,500) in the summary.
+
+    b. Sell prices vary from a minimum of 0.05 to a maximum of 44.36, with a mean of 4.98 and a median of 3.98.
+
+    c. The summary provides information about the distribution of week_ids and sell prices.
+
+
+- **Revenue and Sales Categorization Information**:
+        
+    a. Revenue varies from a minimum of 0 to a maximum of 513.81, with an average of 3.37 and a median of 0.
+    
+    b. The "sales_cat" column indicates the categorization of sales into "Zero Sales," "NonZero Sales below 10," and "Sales above 10." Here, the "Zero Sales" category is the most frequent with 246,622 transactions. 
+    
+    c. The summary provides information about the distribution of revenue and sales categories.
+
+
+- **Sales Kind and Day of the Week Information**:
+
+    a. The "sales_kind" column is binary.
+    
+    b. The "day_of_week" column represents the day of the week associated with each date. We can notice most transactions occuring on Saturday (57500). However, the transactions are almost equally distributed amongst the rest of the days.
+    
+    c. The summary provides information about the distribution of sales_kind and the count of each day of the week.
+
+
+```{r describe, echo=TRUE, include=TRUE}
+describe(merged_data)
+```
+
+The `describe` function is another way to get the similar descriptive statistics as we get using the `summary` function. However, `describe` is more easier to interpret as it provides the complete output in one dataframe, where the variables are found in rows and the statistical measures like mean, standard deviation, etc. in the columns. It also provides the measures of dispersion alongside the measures of central tendency.
+
+
+**Interpretation:**
+
+- **Sales Information**: Besides the statistics in summary function, we can notice that `sales` has a low standard deviation of 3.6.
+
+- **Price Information**:Besides the statistics in summary function, we can notice that `sell_price` has standard deviation of 3.87 which is lower than its average.
+        
+- **Revenue and Sales Categorization Information**: Besides the statistics in summary function, we can notice that `revenue` has standard deviation of 6.97 which is almost the double of its average.
+        
+
+```{r sales hist, echo=TRUE, include=TRUE}
+# Histogram for 'sales' column
+hist(merged_data$sales, main="Histogram of Sales", xlab="Sales", col="skyblue", border="black")
+```
+
+**Interpretation of the Sales Histogram:**
+
+We can notice that the sales is extremely skewed on the right. This means most of the transactions are lower values. In our case, More than half of our data has sales with "0" number of products sold.
+
+
+```{r sell price density, echo=TRUE, include=TRUE}
+#  Density Plot for 'sell_price' column
+merged_data %>%
+  ggplot(aes(x=sell_price)) +
+  geom_density(fill="green", color="#e9ecef", alpha=100,main="Density Plot of Sell Price", xlab="Sell Price", border="black")
+```
+
+**Interpretation of the Selling Price Density Plot:**
+
+We can notice that the selling price is extremely skewed on the right. This means most of the price values are lower values. In our case, Majority of our product prices have a value less than 10.
+
+
+```{r revenue box, echo=TRUE, include=TRUE}
+# Boxplot for 'revenue' column
+boxplot(merged_data$revenue, main="Boxplot of Revenue", ylab="Revenue", col="skyblue", border="black")
+```
+
+**Interpretation of the Revenue Box Plot:**
+
+We can notice that the median of our revenue is 0. This is because of majority of sales being "0" sales. Due to the Inter-Quartile range being till 4.48, all the other revenue earned will be considered as outliers in our data. We can also notice that the maximum revenue earned in one of the transactions is just over 500.
+
+
+
+### Visual Analytics
+
+```{r sell price and sales, echo=TRUE, include=TRUE}
+# Sell price and Sales
+ggplot(merged_data) +
+  aes(x=sell_price, y=sales) +
+  geom_point(aes(col=factor(category_of_product)), size=2) +
+  scale_colour_brewer(palette = "Set1") +
+  scale_x_continuous(breaks=seq(0, 15, 30), labels = seq(0,15,30)) +
+  xlim(c(0, 50)) +
+  ylim(c(0, 300)) +
+  geom_vline(xintercept = c(10,20), #geom_hline for horizontal
+             linetype="dotted",
+             color = "green",
+             size=1) +
+  labs(title="Selling Price vs Number fo Products sold ",
+       subtitle="by Product Category",
+       y="Sales",
+       x="Selling Price",
+       color = "Product Category",
+       caption="Sales and Price Analysis") +
+  theme_classic()
+```
+
+**Interpretation of the Sales vs Selling Price Scatter Plot:**
+
+- There is a negative correlation between selling price and number of products sold. This means that, in general, higher-priced products sell in lower quantities, while lower-priced products sell in higher quantities.
+
+- There is a lot of variation in the data. This means that there are some high-priced products that sell in high quantities, and some low-priced products that sell in low quantities.
+    
+- **drinks_and_food*: This category has the highest average number of products sold and the lowest selling_price when compared to other categories.
+    
+- **fast_moving_consumer_goods**: This category has a lower number of products sold and a varied distribution of selling price.
+    
+- **others**: This category is the least diverse, with a concentrated range of selling prices and numbers of products sold.
+
+
+```{r Sales across Days, echo=TRUE, include=TRUE}
+# Sales across Days
+ggplot(merged_data, aes(x = day_of_week, y = sales)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Bar Plot of Total Sales by Day of the Week",
+       x = "Day of the Week",
+       y = "Total Sales") +
+  theme_minimal()
+```
+
+**Interpretation of the Sales across Days of the week Bar Plot:**
+
+We can notice that all our transactions are almost equally distributed among all the days of the week. However, we can notice the least number of transactions occur on Monday.
+
+
+```{r Sales across product cat, echo=TRUE, include=TRUE}
+# Sales across category of product and grouped by state
+merged_data %>%
+  ggplot(aes(x = category_of_product, y = sales, fill = factor(state))) +
+  geom_bar(stat = "Identity", position = "dodge")
+```
+
+**Interpretation of the Sales across category of product and grouped by state Multi-Bar Plot:**
+
+- The `drinks_and_food` category has the most number of products sold followed by `fast_moving_consumer_goods`
+    
+- The state of Telangana tops the sales in `drinks_and_food` category followed by Kerala.
+    
+- Unlike in the `drinks_and_food` category, teh state of Maharastra has most of the products sold under the `fast_moving_consumer_goods` catergory.
+    
+
+```{r Sales across time, echo=TRUE, include=TRUE}
+# Sales across time
+ggplot(merged_data, aes(x = date, y = sales)) +
+  geom_line(color = "blue") +
+  labs(title = "Sales Over Time", x = "Date", y = "Sales")
+```
+
+**Interpretation of the Sales across time Line Plot:**
+
+We can notice the sales from January 2020 to December 2020. The number of products sold is highly varied, however, we can observe a few peaks with the highest number of products sold in the month of October. 
+
+
+```{r Sales across outlets, echo=TRUE, include=TRUE}
+# Sales across outlets
+merged_data %>%
+  ggplot(aes(x = factor(outlet), y = sales, fill = factor(department_identifier))) +
+  geom_bar(stat = "Identity")
+```
+
+**Interpretation of the Sales across outlets Stacked Bar Plot:**
+
+- We can notice the highest number of products sold by outlet **113**. On the contrary, the least number of products sold was made by outlet **114**.
+    
+- Across all of the outlets, department **33** makes most of the sales, whereas, department **11** makes the least of the sales.
+
+
+```{r Sales across States, echo=TRUE, include=TRUE}
+# Density of Sales across States
+coordinates_data <- data.frame(
+  state = c("Kerala", "Maharashtra", "Telangana"),
+  Longitude = c(76.6413, 75.7139, 79.0193),
+  Latitude = c(10.1632, 19.7515, 18.1124)
+)
+merged_data_with_coordinates <- merged_data %>%
+  left_join(coordinates_data, by = c("state" = "state"))
+# Get world map data
+world <- ne_countries(scale = "medium", returnclass = "sf")
+# Filter data for India
+india <- world[world$iso_a2 == "IN", ]
+# Create a static map using ggplot2
+static_map <- ggplot() +
+  geom_sf(data = india, fill = "white", color = "black") +
+  geom_point(data = merged_data_with_coordinates, aes(x = Longitude, y = Latitude, size = sales, color = sales), alpha = 0.7) +
+  scale_size_continuous(name = "Sales", breaks = seq(0, max(merged_data_with_coordinates$sales), by = 50), labels = scales::comma) +
+  scale_color_gradient(name = "Sales", low = "blue", high = "red") +
+  labs(title = "Sales across States", subtitle = "Bubble size represents sales") +
+  theme_minimal()
+print(static_map)
+```
+
+**Interpretation of the Sales across states:**
+
+- We can notice the state of Telangana having the most number of products sold.
+
+- Even though we found Maharashtra having most of the transactions through the descriptive statistics, we can notice that the sales or number of products sold is the least for this state.
+
+
+
+### Correlation and Testing
+
+```{r correlation, echo=TRUE, include=TRUE}
+# Calculate correlation coefficient between 'sell_price' and 'sales'
+cor_coefficient <- cor(merged_data$sell_price, merged_data$sales)
+print(paste("The Correlation between Sales and Selling Price is:", round(cor_coefficient, 3)))
+```
+
+**Interpretation of the Correlation of sales and sell_price**:
+    
+- From the negative correlation, we can infer that, As the selling price increases, there is a tendency for sales to decrease, and vice versa.
+    
+- The strength of the correlation is not very high (moderate), suggesting that other factors may also influence the relationship between sales and selling price.
+
+
+```{r rsquare, echo=TRUE, include=TRUE}
+# Calculate coefficient of determination (R-squared)
+rsquared <- cor_coefficient^2
+print(paste("Coefficient of Determination (R-squared):", round(rsquared, 4)))
+```
+
+**Interpretation of the Coefficient of Determination of sales and sell_price**:
+
+-  In this case, the R-squared value of 0.0392 suggests that the model has limited explanatory power. Only a small percentage (3.92%) of the variability in sales is accounted for by the selling price in the model. 
+    
+- The majority of the variability is not explained by selling_price, indicating that other factors not included in the model may contribute to the variability in sales.
+
+
+```{r correlation visual, echo=TRUE, include=TRUE}
+# Visualizing the Correlation
+ggscatter(merged_data, x = "sell_price", y = "sales",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Selling Price", ylab = "sales")
+```
+
+**Interpretation of Correlation Visual**:
+
+The visual helps us visualize the correlation between `sales` and `sell_price`.
+
+
+```{r Pearson’s Correlation, echo=TRUE, include=TRUE}
+# Pearson’s Correlation Coefficient Test
+cor.test(merged_data$sell_price, merged_data$sales, method = "pearson")
+```
+
+**Interpretation of Pearson’s Correlation Coefficient Test**:
+    
+- The negative correlation coefficient (cor = -0.1980982) suggests a moderate negative linear relationship between `sell_price` and `sales`.
+    
+- The extremely small p-value (< 0.00000000000000022) indicates strong evidence against the null hypothesis, suggesting that there is a significant correlation between `sell_price` and `sales`.
+    
+- The confidence interval for the correlation coefficient does not include 0, reinforcing the rejection of the null hypothesis.
+    
+- The t-value of -127.02 indicates that the observed correlation is significantly different from 0.
+
+
+```{r Spearman’s correlation, echo=TRUE, include=TRUE}
+# Spearman’s correlation coefficient
+cor(merged_data$sell_price, merged_data$sales, method = "spearman")
+cor.test(merged_data$sell_price, merged_data$sales, exact = FALSE, method = "spearman")
+```
+
+**Interpretation of Spearman’s correlation coefficient**:
+
+- The negative Spearman's rank correlation coefficient (rho = -0.2975635) suggests a moderate negative monotonic relationship between sell_price and sales.
+    
+- The extremely small p-value (< 0.00000000000000022) indicates strong evidence against the null hypothesis, suggesting that there is a significant Spearman's rank correlation between sell_price and sales.
+
+- The alternative hypothesis is supported, indicating that the true Spearman's rank correlation between sell_price and sales is not equal to 0.
+    
+- The large test statistic (S) contributes to the rejection of the null hypothesis
+
+
+```{r Shapiro Normality, echo=TRUE, include=TRUE}
+# Checking Normality Assumption
+# Take a random sample of 5000 observations from the 'sell_price' column
+sell_price_sample <- sample(merged_data$sell_price, 5000)
+sales_sample <- sample(merged_data$sales, 5000)
+# Perform the Shapiro-Wilk test on the sample
+shapiro.test(sell_price_sample)
+shapiro.test(sales_sample)
+```
+
+**Interpretation of Shapiro's Normality Test**:
+
+- Both samples, sell_price_sample and sales_sample, exhibit strong evidence against the null hypothesis of normality based on the Shapiro-Wilk test. 
+    
+- The extremely low p-values suggest that the distributions of both samples deviate significantly from a normal distribution. 
+    
+- This information is relevant when considering statistical methods that assume normality, as deviations from normality may affect the validity of certain analyses. 
+    
+- Hence, we may conclude that both sell_price and sales are significantly different from normal distribution.
+
+
+
+
+## Regression Models
+
+### 1. Multiple Linear Regression
+```{r Multiple Linear Regression, echo=TRUE, include=TRUE}
+index <- createDataPartition(merged_data$sales, p = 0.75, list = FALSE)
+# Split the data into training and testing sets
+train_data <- merged_data[index, ]
+test_data <- merged_data[-index, ]
+# Building the model
+lin_reg_model <- lm(sales ~ sell_price + category_of_product+ state + day_of_week + outlet + week_id + product_identifier, data = train_data)
+summary(lin_reg_model)# Summarize the model
+```
+
+**Interpretation**:
+
+The linear regression model equation is given by:
+
+`sales=0.4295−0.0537 x sell_price + 0.1941 x category_of_product_fast_moving_consumer_goods +`
+
+`… + 7.6619 x product_identifier_1629 + …`
+
+- **Intercept** (0.4295): The estimated value of the response variable (sales) when all predictor variables are zero.
+
+- **sell_price** (-0.0537): For a one-unit increase in sell_price, the model predicts a decrease in sales by 0.0537 units, holding other variables constant.
+
+- **Other Coefficients**: Similarly the other predictors can be interpreted. The coefficients for categorical variables represent the change in the response variable relative to the reference category. For example, the coefficient for `stateMaharashtra` (0.1229) indicates the estimated change in sales when the state is Maharashtra compared to the Kerala.
+
+- The p-values associated with each coefficient indicate whether the estimated effect of that variable is statistically significant. For example: The p-value for sell_price is very small (0.000708), suggesting that the variable is statistically significant.
+    
+- Some categorical variables (e.g., stateMaharashtra, outlet113, product_identifier_1629, etc.) also have very small p-values, indicating their significance.
+
+
+```{r lin_reg eval, echo=TRUE, include=TRUE}
+predictions <- predict(lin_reg_model, newdata = test_data)
+lin_reg_rmse <- sqrt(mean((test_data$sales - predictions)^2)) # Calculate RMSE
+lin_reg_r_square <- summary(lin_reg_model)$r.squared #R-Squared
+cat("The RMSE value is: ",lin_reg_rmse," and the adj. r-square is: ",lin_reg_r_square)
+```
+
+**Interpretation**:
+
+- The RMSE of 3.138755 suggests that, on average, the model's predictions deviate by approximately 3.14 units from the actual sales values.
+    
+- The R-square value of 0.2740357 indicates that the model explains about 27.4% of the variability in sales. The value suggests that only a moderate proportion of the variability in sales is explained by the model.
+
+
+
+### 2. Regularized Regression
+
+```{r Regularized Regression, echo=TRUE, include=TRUE}
+x <- model.matrix(sales ~ sell_price + category_of_product+ state + day_of_week + outlet + week_id + product_identifier,merged_data)[, -1]
+y <- merged_data$sales
+grid <- 10^seq(10, -2, length = 100)
+train <- sample (1: nrow(x), 0.75*nrow(x))
+test <- (-train)
+y.test <- y[test]
+```
+
+**Interpretation**:
+
+Here, we create a base model similar to our multiple linear regression model. `sales` is considered as our predicted or dependent variable and all the other variables are predictors or independent variables. The data is then split into train (75%) and test.
+
+
+#### Ridge Regression
+```{r Ridge Regression, echo=TRUE, include=TRUE}
+ridge.mod <- glmnet(x[train, ],
+                    y[train],
+                    alpha = 0,
+                    lambda = grid)
+# Setting lambda = 4
+ridge.pred <- predict(ridge.mod , s = 4, newx = x[test, ])
+ridge_rmse <- mean((ridge.pred - y.test)^2) # Test MSE
+var_y <- var(y.test)
+ridge_r_square <- 1 - mean((ridge.pred - y.test)^2) / var_y #r_squared
+
+cat("The RMSE value is: ",ridge_rmse," and the adj. r-square is: ",ridge_r_square)
+```
+
+**Interpretation**:
+
+- The RMSE of 10.17361 suggests that, on average, the ridge regression model's predictions deviate by approximately 10.17 units from the actual values in the test set.
+    
+- The adjusted R-squared of 0.2073097 indicates that the model explains about 20.73% of the variability in the test data.
+    
+
+#### Lasso Regression
+```{r Lasso Regression, echo=TRUE, include=TRUE}
+lasso.mod <- glmnet(x[train, ],
+                    y[train],
+                    alpha = 1,
+                    lambda = grid)
+# Setting lambda = 4
+lasso.pred <- predict(lasso.mod , s = 4, newx = x[test, ])
+lasso_rmse <- mean((lasso.pred - y.test)^2) # Test MSE
+var_y <- var(y.test)
+lasso_r_square <- 1 - mean((lasso.pred - y.test)^2) / var_y #r_squared
+
+cat("The RMSE value is: ",lasso_rmse," and the adj. r-square is: ",lasso_r_square)
+```
+
+**Interpretation**:
+
+- The RMSE of 12.83418 suggests that, on average, the Lasso regression model's predictions deviate by approximately 12.83 units from the actual values in the test set.
+    
+- The adjusted R-squared of 0.000008257423 indicates that the model explains very little of the variability in the test data.
+    
+
+#### Elnet Regression
+```{r Elnet Regression, echo=TRUE, include=TRUE}
+en.mod <- glmnet(x[train, ],
+                 y[train],
+                 alpha = 0.1,
+                 lambda = grid)
+en.pred <- predict(en.mod , s = 4, newx = x[test, ])
+en_rmse <- mean((en.pred - y.test)^2) # Test MSE
+var_y <- var(y.test)
+en_r_square <- 1 - mean((en.pred - y.test)^2) / var_y #r_squared
+
+cat("The RMSE value is: ",en_rmse," and the adj. r-square is: ",en_r_square)
+```
+
+**Interpretation**:
+
+- The RMSE of 11.25747 suggests that, on average, the Elastic Net regression model's predictions deviate by approximately 11.26 units from the actual values in the test set.
+   
+- The adjusted R-squared of 0.1228596 indicates that the model explains a small portion of the variability in the test data, suggesting that it captures more of the underlying patterns compared to the Lasso model.
+    
+
+#### Tuning Ridge Regression
+```{r Tuning Ridge Regressio, echo=TRUE, include=TRUE}
+cv.out <- cv.glmnet(x[train, ], y[train], alpha = 0)
+bestlam <- cv.out$lambda.min
+ridge.pred <- predict(ridge.mod , s = bestlam , newx = x[test, ])
+best_ridge_rmse <- mean((ridge.pred - y.test)^2) # Test MSE
+var_y <- var(y.test)
+best_ridge_r_square <- 1 - mean((ridge.pred - y.test)^2) / var_y #r_squared
+out <- glmnet(x, y, alpha = 0)
+predict(out, type = "coefficients", s = bestlam)
+
+cat("The RMSE value is: ",best_ridge_rmse," and the adj. r-square is: ",best_ridge_r_square, ". The best lambda value used was: ",bestlam )
+
+```
+
+**Interpretation**:
+
+- Since, the Ridge Regression had the highest r-square value. We used the cross validation to tune the ridge regression and build a ridge regression model with the best parameters.
+   
+- The output of the coefficients for the Ridge model indicates the estimated effect of each variable on the response variable (dependent variable). Positive coefficients suggest a positive effect, while negative coefficients suggest a negative effect. The magnitude of the coefficient indicates the strength of the effect.
+  
+- For example, the coefficient for the variable sell_price is approximately -0.0707. This suggests that, holding other variables constant, a one-unit increase in sell_price is associated with a decrease of approximately 0.0707 units in the response variable.
+
+- The coefficients are penalized by the Ridge regularization, which tends to shrink them towards zero.
+    
+- After tuningl, we can notice a lower RMSE of 9.414067 suggests that, on average, the ridge regression model's predictions deviate by approximately 9.41 units from the actual values in the test set.
+    
+- The tuning also improved the adjusted R-squared to 0.2664908 indicates that the model explains about 26.64% of the variability in the test data.
+
+
+
+### 3. Logistic Regression
+```{r Logistic Regression, echo=TRUE, include=TRUE}
+training.samples <- merged_data$sales_kind %>%
+  createDataPartition(p = 0.75, list = FALSE)
+train.data <- merged_data[training.samples, ]
+test.data <- merged_data[-training.samples, ]
+# Building the Model
+log_reg_model <- glm( sales_kind ~ sell_price + category_of_product+ state + day_of_week + outlet + week_id + product_identifier, data = train.data, family = binomial)
+summary(log_reg_model)
+```
+
+**Interpretation**:
+
+- **Intercept** (-1.3386368): When all other predictors are zero, the log-odds of sales is -1.3386368.
+   
+- **sell_price** (-0.2900130): For a one-unit increase in sell_price, the log-odds of sales decreases by -0.2900130.
+    
+- **category_of_productfast_moving_consumer_goods** (0.8930295): The presence of "fast_moving_consumer_goods" in the category_of_product increases the log-odds of the sales by 0.8930295.
+    
+- Based on the p-value we can infer that the predictors including `sell_price`, `category_of_productfast_moving_consumer_goods`, `category_of_productothers`, `stateMaharashtra`, `stateTelangana`, `outlet331` and many other predictors are statistically significant.
+
+
+```{r anova test, echo=TRUE, include=TRUE}
+anova(log_reg_model, test="Chisq") # Model Test: Anova
+```
+
+**Interpretation**:
+
+- **Null Model**: The initial model with no predictors had a deviance of 391852 on 296249 degrees of freedom.
+
+- **sell_price**: Adding the variable sell_price significantly improved the model (p-value < 0.0000000000000002).
+
+- **category_of_product**: The addition of the category_of_product variable also significantly improved the model.
+
+- **state**: Similar improvement with the addition of the state variable.
+
+- **day_of_week**: The addition of day_of_week was marginally significant (p-value = 0.03671).
+
+- **outlet**: Adding the outlet variable significantly improved the model.
+
+- **week_id**: The addition of week_id resulted in a significant improvement.
+
+- **product_identifier**: Adding the product_identifier variable led to a highly significant improvement in the model.
+
+In summary, each set of variables (sell_price, category_of_product, state, day_of_week, outlet, week_id, and product_identifier) contributes significantly to explaining the variation in the response variable (sales_kind). The model seems to be fitting the data well, as indicated by the reduction in deviance and the significance of each variable.
+
+
+```{r auc, echo=TRUE, include=TRUE}
+# Make predictions
+test.data$fitted_prob <- log_reg_model %>% predict(test.data, type = "response")
+test.data$predicted <- factor(ifelse(test.data$fitted_prob > 0.5, 1, 0))
+
+# Extracting the metrics
+log_likelihood_model <- logLik(log_reg_model)
+null_model <- logLik(glm(sales_kind ~ 1, family = binomial, data = train.data))
+
+log_reg_r_square<- 1 - (log_likelihood_model / null_model) # McFadden's R-squared
+log_accuracy <- mean(test.data$predicted == test.data$sales_kind) # Model accuracy
+
+pred <- prediction(test.data$fitted_prob, test.data$sales_kind)
+pmf <- performance(pred, measure = "tpr", x.measure = "fpr")
+# Area Under ROC Curve
+auc <- performance(pred, measure = "auc")
+auc <- auc@y.values[[1]]
+
+cat("The AUC value is: ",auc," and the McFaddden r-square is: ",log_reg_r_square)
+```
+
+**Interpretation**:
+
+- McFadden's R-squared is a measure of the proportion of variance explained by the model compared to a null model. A higher value indicates a better fit. The result is approximately 0.1792, suggesting that the model explains about 17.92% of the variability in the response variable, a modest but non-trivial amount of variance explained by the model.
+    
+- The AUC (Area Under the Curve) is a summary measure of the ROC curve. A higher AUC indicates better discrimination. The AUC value is approximately 0.7730, suggesting that the model has reasonably good discrimination ability.
+
+
+```{r roc curve, echo=TRUE, include=TRUE}
+# Plotting the ROC Curve
+plot(pmf,colorize=TRUE,lwd= 3)
+```
+
+**Interpretation**:
+
+ROC (Receiver Operating Characteristic) curve is a graphical representation of the trade-off between true positive rate (sensitivity) and false positive rate (1 - specificity). The ROC Curve Displays the AUC of 0.7730. 
+
+
+### 4. Multinomial Regression
+```{r mnom table, echo=TRUE, include=TRUE}
+table(merged_data$sales_cat)
+```
+
+**Interpretation**:
+
+- The table provides insights into the distribution of sales across different categories.
+
+- The "Zero Sales" category is the most frequent, with a mean sales value of 0, indicatingthat a large number of observations have zero sales. There are 246,622 transactions in the "Zero Sales" category.
+
+- The "NonZero Sales below 10" category has a mean sales value of 2.46, suggesting that, on average, sales in this category are relatively low.There are 141,475 transactions in the "NonZero Sales below 10" category.
+
+- The "Sales above 10" category has a higher mean sales value of 19.9, indicating that, on average, sales in this category are higher than the other two categories. There are 6,903 transactions in the "Sales above 10" category.
+
+
+```{r Multinomial Regression, echo=TRUE, include=TRUE}
+# Model Building
+mn_reg_model <- multinom(sales_cat ~ sell_price + category_of_product+ state + day_of_week + outlet + week_id + product_identifier, merged_data)
+summary(mn_reg_model)
+```
+
+**Interpretation**:
+
+We can write our model equations:
+
+\(\ln\left(\frac{P(\text{sales_cat = NonZero Sales below 10})}{P(\text{sales_cat = Zero Sales})}\right)\) = 0.6278445 + -0.2942603 x sell_price + 0.2196583 x category_of_productfast_moving_consumer_goods + ...
+
+\(\ln\left(\frac{P(\text{sales_cat = Sales above 10})}{P(\text{sales_cat = Zero Sales})}\right)\) = -1.5512699 -1.2607034 x sell_price  -0.7497819 x category_of_productfast_moving_consumer_goods + ...
+
+These are the logit coefficients relative to the base category. 
+    
+- **Model: NonZero Sales below 10 relative to "Zero Sales**: 
+      
+    a. The coefficient for sell_pricesell_price is -0.2942603. For a one-unit increase in the selling price, the log-odds of being in the "NonZero Sales below 10" category decrease by 0.2942603.
+
+    b. The coefficient for category_of_productfast_moving_consumer_goodscategory_of_productfast_moving_consumer_goods is 0.2196583. For a one-unit increase in the category of a fast-moving consumer good, the log-odds of being in the "NonZero Sales below 10" category increase by 0.2196583.
+    
+- **Model: Sales above 10 relative to "Zero Sales**: 
+      
+    a. The coefficient for sell_pricesell_price is -1.2607034. For a one-unit increase in the selling price, the log-odds of being in the "Sales above 10" category decrease by 1.2607034.
+
+    b. The coefficient for category_of_productfast_moving_consumer_goodscategory_of_productfast_moving_consumer_goods is -0.7497819. For a one-unit increase in the category of a fast-moving consumer good, the log-odds of being in the "Sales above 10" category decrease by 0.7497819.
+
+
+```{r mnom eval, echo=TRUE, include=TRUE}
+# Model Evaluation
+mnom_r_square<- pR2(mn_reg_model, method = "mcfadden")[4] # r-squared
+predictions <- predict(mn_reg_model, type = "probs", newdata = merged_data)
+predictions_matrix <- cbind(1 - rowSums(predictions), predictions)
+roc.multi <- multiclass.roc(merged_data$sales_cat, predictions_matrix)
+mean_auc <- auc(roc.multi) # Calculate mean AUC
+cat("The AUC value is: ",mean_auc," and the McFaddden r-square value is: ",mnom_r_square)
+```
+
+**Interpretation**:
+
+- **AUC Value**:
+      
+    a. The AUC value is a measure of the model's discriminatory power or the ability to distinguish between different classes. In this case, the mean AUC is 0.8118451.
+      
+    b. An AUC value of 1 indicates perfect discrimination, while an AUC of 0.5 suggests no discriminatory power (similar to random chance).
+      
+    c. In our case, an AUC of 0.8118451 suggests that the model has good discriminatory power in predicting the different categories of sales_cat.
+
+
+- **McFadden's Pseudo R-squared Value**:
+        
+    a. McFadden's pseudo R-squared is a measure of the goodness of fit of a logistic regression model.
+        
+    b. The McFadden's R-squared value is 0.2022847.
+        
+    c. McFadden's R-squared values are typically between 0 and 1, with higher values indicating a better fit. However, the interpretation of the absolute magnitude can be subjective. It is often used for model comparison rather than as an absolute measure of goodness of fit.
+      
+    d. In our case, a value of 0.2022847 suggests that the model explains a moderate proportion of the variance in the response variable.
+
+
+
+### 5. Regression Tree
+```{r Regression Tree, echo=TRUE, include=TRUE}
+train <- sample(1 : nrow(merged_data), nrow(merged_data)/2)
+# Building the Model
+merged_data.rpart <- rpart(sales ~ sell_price + category_of_product+ state + day_of_week + outlet + week_id + product_identifier, data = merged_data, subset = train)
+merged_data.rpart
+```
+
+**Interpretation**:
+
+- **Tree Structure**: The tree is composed of nodes, each representing a decision point. Terminal nodes (indicated by "*") are the end points where predictions are made.
+
+- **Root Node (Node 1)**: The root node is the starting point for the tree and includes all observations in our dataset (197,500 observations). The dependent variable sales is predicted to have an average value of 1.2334530 for the entire dataset.
+
+- **Splitting Decisions**: The tree makes decisions based on the values of predictor variables. In this case, the first split is based on the product_identifier variable. If product_identifier is one of the values listed in the split (74, 337, 423, ...), the tree goes to Node 2; otherwise, it goes to Node 3.
+
+- **Node 2 - Left Child Node**: If product_identifier is one of the specified values, the tree further splits based on product_identifier again. Two more splits occur based on the values of product_identifier. Terminal Nodes 4 and 5 are reached, providing predictions for cases that satisfy the conditions.
+
+- **Node 3 - Right Child Node**: If product_identifier is not in the specified list, the tree goes to Node 3 and further splits based on product_identifier. Two splits occur based on the values of product_identifier. Terminal Nodes 6 and 7 are reached, providing predictions for cases that satisfy the conditions.
+
+- **Terminal Nodes (4, 5, 6, 7)**: Each terminal node provides a predicted value for the dependent variable sales for cases that satisfy the conditions leading to that node. The predicted values are based on the average value of sales in that node.
+
+- **Predicted Values**:  For example, in Terminal Node 4, where product_identifier is one of the specified values, the predicted value for sales is 0.3902222. In Terminal Node 5, the predicted value for sales is 2.0248130, and so on.
+
+- **Interpretation of Splits**: The tree splits based on certain values of product_identifier, outlet, and week_id, indicating that these variables are important in predicting sales.
+
+In summary, the regression tree has identified specific conditions based on the values of predictor variables that lead to different predictions for the dependent variable sales. It provides a structured way to understand how different factors contribute to the prediction of sales.
+
+
+```{r reg tree plot, echo=TRUE, include=TRUE}
+rpart.plot(merged_data.rpart, box.palette="RdBu", shadow.col="gray")
+```
+
+**Interpretation**:
+
+This plot is used to visualize the regression tree created above.
+
+
+```{r reg tree plot 2, echo=TRUE, include=TRUE}
+yhat <- predict(merged_data.rpart, newdata = merged_data[-train ,])
+merged_data.test <- merged_data[-train, "sales"]
+plot(yhat, merged_data.test)
+abline (0,1)
+```
+
+**Interpretation**:
+
+- The plot helps us visualize the relation between the actual and predicted values (y_hat).
+    
+- The predicted values (yhat) generally appear to be scattered around the diagonal line, but there is a trend for the predictions to underestimate the actual values for higher values of y. This could be due to a number of factors, such as bias in the training data or limitations of the regression tree model.
+
+- There are a few outliers where the predicted values are far from the actual values. These outliers could be due to errors in the data or misinterpretations of the model by the training data.
+
+- The overall pattern of the points suggests that the regression tree model is able to capture some of the relationships between the features and the target variable, but it is not perfect. There is still room for improvement in the model's accuracy.
+
+
+```{r reg tree eval, echo=TRUE, include=TRUE}
+# Model Evaluation
+reg_tree_rmse <- sqrt(mean((yhat - merged_data.test)^2)) #rmse
+predicted_values <- predict(merged_data.rpart, newdata = merged_data)
+observed_values <- merged_data$sales  
+reg_tree_r_square <- 1 - sum((observed_values - predicted_values)^2) / sum((observed_values - mean(observed_values))^2) # rsquared
+
+cat("The RMSE value is: ",reg_tree_rmse," and the adj. r-square is: ",reg_tree_r_square)
+
+```
+
+**Interpretation**:
+
+- The RMSE of 3.034941 indicates that, on average, the model's predictions deviate by approximately 3.03 units from the actual observed values.
+    
+- The adjusted R-squared of 0.3058107 suggests that the model explains about 30.58% of the variance in the dependent variable (sales). This means that 30.58% of the variability in sales is captured by the predictor variables included in the model.
+
+
+
+### 6. Poisson Regression
+```{r poiss data, echo=TRUE, include=TRUE}
+merged_data %>%
+  summarise(mean_sales = mean(sales), var_sales = var(sales), ratio = var_sales/mean_sales)
+```
+
+**Interpretation**:
+
+- In Poisson regression, the mean and variance of the response variable are assumed to be equal. This is known as equidispersion.
+    
+- In our case, the ratio of variance to mean is quite high (10.52), indicating overdispersion. Overdispersion occurs when the variance is larger than expected under a Poisson distribution.
+    
+- While Poisson regression assumes variance equals mean, overdispersion suggests that the variability in sales is higher than what a Poisson model would predict.
+    
+- This high variance could also be due to the dominance of '0' sales in our dataset.
+
+
+```{r poiss plot, echo=TRUE, include=TRUE}
+merged_data_tab <- table(factor(merged_data$sales)) # include zero frequencies
+barplot(merged_data_tab,
+        xlab = "Number of Sales for the Products",
+        ylab = "Frequency",
+        col = "lightblue")
+abline(v = mean(merged_data$sales), col = "red", lwd = 3)
+ci <- mean(merged_data$sales) + c(-1, 1) * sd(merged_data$sales)
+lines(x = ci, y = c(-4, -4), col = "red", lwd = 3, xpd = TRUE)
+```
+
+**Interpretation**:
+
+Using the graph, we can visualize that our dataset is predominated by 0 number of products sold in a transaction, which was also highlighted in our Exploratory Data Analytics Section
+
+
+```{r Poisson Regression, echo=TRUE, include=TRUE}
+index <- createDataPartition(merged_data$sales, p = 0.75, list = FALSE)
+# Split the data into training and testing sets
+train_data <- merged_data[index, ]
+test_data <- merged_data[-index, ]
+# Building the model
+merged_data.pois <- glm(sales ~ sell_price + category_of_product+ state + day_of_week + outlet + week_id + product_identifier, data = train_data, family = poisson)
+summary(merged_data.pois)
+```
+
+**Interpretation**:
+
+- **Intercept**: The intercept is approximately -1.04. This is the estimated log of the expected count of sales when all predictor variables are zero.
+
+- **sell_price**: For a one-unit increase in sell_price, the log of the expected count of sales decreases by approximately 0.29.
+
+- **category_of_product**: Holding other variables constant, the fast_moving_consumer_goods category is associated with an increase of about 0.83 in the log of the expected count of sales compared to the drinks_and_food category. The others category is associated with a larger increase of about 1.48 in the log of the expected count of sales compared to the drinks_and_food
+
+- **state**: Maharashtra is associated with an increase of about 0.10 in the log of the expected count of sales compared to the Kerala. Telangana is associated with a decrease of about 0.23 in the log of the expected count of sales compared to the Kerala.
+
+- **day_of_week**: Various coefficients for different days of the week indicate how sales differ on those days compared to the Friday. For example, Saturday is associated with a decrease of about 0.03 in the log of the expected count of sales.
+
+- **outlet**: Different outlets have different effects on sales compared to the outlet 111. For example, outlet113 is associated with an increase of about 0.44 in the log of the expected count of sales.
+
+- **week_id**: Various coefficients for different weeks indicate how sales differ in those weeks compared to the week 49.
+
+- **product_identifier**: Coefficients for different product identifiers indicate how sales differ for those products compared to the product 74.
+
+- It is important to note that the dispersion parameter for the Poisson family is taken to be 1, suggesting that the model assumes equidispersion (variance equals mean).
+
+
+```{r Exponentiated Coefficients, echo=TRUE, include=TRUE}
+exp(coef(merged_data.pois)) # Exponentiated Coefficients
+```
+
+**Interpretation**:
+
+- **Intercept**: The estimated coefficient for the intercept is 0.3532573. Since this is less than 1, you would exponentiate it to get the estimated rate for the baseline condition (when all other predictors are zero).
+
+- **sell_price**: The coefficient is 0.7488620. This suggests that, holding other variables constant, a one-unit increase in sell_price is associated with a 0.7488620 times change in the rate of the dependent variable.
+
+- **category_of_productfast_moving_consumer_goods**: The coefficient is 2.2977188. This suggests that, compared to the drinks_and_food category, the rate is expected to increase by a factor of 2.2977188 for this category.
+
+- **category_of_productothers**: The coefficient is 4.3710581. Similar to the interpretation above, the rate is expected to increase by a factor of 4.3710581 compared to the drinks_and_food category.
+
+- **stateMaharashtra**: The coefficient is 1.0999730. This suggests that, compared to the Kerala, the rate is expected to increase by a factor of 1.0999730 for Maharashtra.
+
+- **stateTelangana**: The coefficient is 0.7957579. This suggests that, compared to the Kerala, the rate is expected to decrease by a factor of 0.7957579 for Telangana.
+
+- Similarly, the day_of_week, week_id, product_identifier, and outlet variables variables can be interpreted
+
+
+```{r poiss eval, echo=TRUE, include=TRUE}
+predictions <- predict(merged_data.pois, newdata = test_data, type = "response")
+pois_rmse <- sqrt(mean((test_data$sales - predictions)^2)) # Calculate RMSE
+pois_r_square <- pR2(merged_data.pois, method = "nagelkerke")[4] # Calculate R-squared
+
+cat("The RMSE value is: ",pois_rmse," and the McFadden r-square value is: ",pois_r_square)
+
+```
+
+**Interpretation**:
+
+- The RMSE value is 3.040894. This is a measure of the average deviation between the actual sales values in our test dataset and the sales values predicted by our Poisson regression model. Lower RMSE values indicate better model performance, with 0 being a perfect fit.
+
+- The McFadden's R-squared value is 0.3687696. McFadden's R-squared is a measure of the proportion of variability explained by our model compared to a null model (a model with no predictors). It ranges between 0 and 1, where higher values indicate a better fit. In this case, approximately 36.88% of the variability in the response variable is explained by our Poisson regression model relative to a null model.
+
+
+
+
+## Evaluating the Regression Models
+
+### Model Comparison by R-squared
+
+```{r rsquare eval, echo=TRUE, include=TRUE}
+r_squared_data <- data.frame(
+  Model = c("Multiple Linear Regression", "Ridge Regression", "Lasso Regression", "Elnet Regression",
+            "Logistic Regression", "Multinomial Regression", "Regression Tree", "Poisson Regression"),
+  R_squared = c(lin_reg_r_square, best_ridge_r_square, lasso_r_square, en_r_square,
+                log_reg_r_square, mnom_r_square, reg_tree_r_square, pois_r_square)
+)
+r_squared_data
+```
+
+**Interpretation**:
+
+- In general, a higher R-squared indicates a better fit of the model to the data. 
+    
+- The Poisson regression model, designed for count data, explains approximately 36.88% of the variability in the response variable. This indicates the highest R-squared among the models considered.
+    
+- Based on the R-squared values, the next best model for our purpose would be the regression tree.
+
+
+### Model Comparison by RMSE
+
+```{r rmse eval, echo=TRUE, include=TRUE}
+rmse_data <- data.frame(
+  Model = c("Multiple Linear Regression", "Ridge Regression", "Lasso Regression", "Elnet Regression",
+            "Regression Tree", "Poisson Regression"),
+  RMSE = c(lin_reg_rmse, best_ridge_rmse, lasso_rmse, en_rmse, reg_tree_rmse, pois_rmse)
+)
+rmse_data
+```
+
+**Interpretation**:
+
+- The regression tree model has an RMSE of approximately 3.03, indicating least prediction errors compared to the other regression models.
+
+- The Poisson regression model, designed for count data, has an RMSE similar to the regression tree model, with predictions deviating by approximately 3.04 units on average.
+
+In summary, the lower the RMSE, the better the model's predictive performance. In our case, the regression tree and Poisson regression model appear to have lower prediction errors compared to all the other models.
+
+
+### Model Comparison by AUC
+
+```{r auc eval, echo=TRUE, include=TRUE}
+auc_data <- data.frame(
+  Model = c("Logistic Regression", "Multinomial Regression"),
+  AUC = c(auc, mean_auc)
+)
+auc_data
+```
+
+**Interpretation**:
+
+- The logistic regression model has an AUC of approximately 0.77. and the multinomial regression model has a higher AUC of approximately 0.81 compared to logistic regression. 
+    
+- This indicates that the multinomial regression model has better overall discriminatory power across multiple classes.
+
+
+
+# Conclusion
+
+In our comprehensive analysis, we endeavored to discover and recognize the key predictors influencing income in our dataset. Leveraging Exploratory Data Analysis (EDA), we delved into the patterns inherent in our facts, specially specializing in the relationship between sales and various factors. One pivotal factor of our research become the examination of the effect of `sell_price` on `income` thru Correlation Analysis and more than one checks, elucidating the variability delivered via changes in selling fees.
+
+
+To develop a robust predictive model for sales, we hired a numerous set of regression techniques. The repertoire covered conventional models which include Multiple Linear Regression, which allowed us to assess the linear relationships between a couple of predictors and sales. Additionally, we explored Regularized Regression Models, inclusive of Ridge and Lasso Regression, to mitigate potential overfitting and enhance the generalization of our fashions. The Elnet Regression, combining factors of each Ridge and Lasso, in addition enriched our technique.
+
+
+Recognizing that income inherently represents a be counted of products sold, we prolonged our analysis to encompass specialised regression fashions. Logistic Regression, carried out after changing sales into a binary shape, facilitated the know-how of factors influencing the probability of a sale happening. Multinomial Regression, introduced through the conversion of sales into a categorical variable, accelerated our modeling abilities to house a couple of training.
+
+
+Intriguingly, the application of Regression Tree techniques allowed us to seize non-linear relationships and complicated interactions inside the facts. The Poisson Regression model emerged as a standout desire for our matter facts, given its suitability for modeling the distribution of rare activities.
+
+
+Our evaluation metrics, together with Root Mean Squared Error (RMSE) and R-squared, furnished insights into the effectiveness of the Poisson Regression Model. Despite achieving a mild R-squared cost of 0.3687, signifying the proportion of variance defined within the response variable, it became glaring that there is enough room for improvement in enhancing the predictive electricity of our model. This indicates that in addition refinement of the version, exploration of additional functions, or attention of opportunity modeling techniques may want to make contributions to a greater comprehensive expertise of the factors influencing income. As we pass forward, addressing these opportunities could be pivotal in refining and optimizing our predictive model for income.
