@@ -28,7 +28,7 @@ library(reshape2)
 library(zoo)
 library(mlogit)
 
-##################################### DATA PREPARATION & UDNERSTANDING ####################################################################
+##################################### DATA PREPARATION & UNDERSTANDING ####################################################################
 
 # Q. Use the “marketing_campaign.csv” dataset for this session. Comment on the structure of the dataset.
 #    Provide a table with summary statistics for all the variables in the dataset.
