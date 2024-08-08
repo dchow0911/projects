@@ -12,6 +12,8 @@ Check out my [portfolio site](https://dchow0911.github.io) to see my projects an
 
 Check out my [digital resume](https://chowdarydhruv7.wixsite.com/myresume) to view my journey so far!
 
+Here is an answer to, [Why Am I your Ideal Candidate?](https://public.tableau.com/views/WhyAmIyourIdealCandidate/WhyMe?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)
+
 Check out a book I authored on data visualization, titled, ["Visualize to Mesmerize: Mastering the Art of data visualization and infographics"](https://dvwithdhruv.wixsite.com/portfolio) Now Available on Amazon and Apple Books as well!
 
 
