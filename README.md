@@ -20,8 +20,11 @@ Check out a book I authored on data visualization, titled, ["Visualize to Mesmer
 ## Technologies and Tools
 - **Languages:** Python, R
 - **Frameworks/Libraries:**
-    **Python-** Pandas, NumPy, scikit-learn, SVM, XGBoost, statsmodels, Matplotlib, Seaborn, NLTK, spaCy, re, TfidfVectorizer, CountVectorizer, TensorFlow, Keras, PyTorch, Plotly, Bokeh.
-    **R-** dplyr, tidyverse, ggplot2, caret, randomForest, glmnet, plm, lmtest, MASS, plotly, shiny.
+
+     **Python-** Pandas, NumPy, scikit-learn, SVM, XGBoost, statsmodels, Matplotlib, Seaborn, NLTK, spaCy, re, TfidfVectorizer, CountVectorizer, TensorFlow, Keras, PyTorch, Plotly, Bokeh.
+
+     **R-** dplyr, tidyverse, ggplot2, caret, randomForest, glmnet, plm, lmtest, MASS, plotly, shiny.
+  
 - **Tools:** Tableau, Power BI, Alteryx Designer, MS Office, Figma
 - **Other:** BPMN 2.0
 
