@@ -19,7 +19,7 @@ Check out a book I authored on data visualization, titled, ["Visualize to Mesmer
 
 ## Technologies and Tools
 - **Languages:** Python, R
-- **Frameworks/Libraries:**
+- **Frameworks/Libraries:** 
 
      **Python-** Pandas, NumPy, scikit-learn, SVM, XGBoost, statsmodels, Matplotlib, Seaborn, NLTK, spaCy, re, TfidfVectorizer, CountVectorizer, TensorFlow, Keras, PyTorch, Plotly, Bokeh.
 
@@ -79,12 +79,12 @@ Check out a book I authored on data visualization, titled, ["Visualize to Mesmer
 
 #### Hyundai Supply Chain management and analysis
 - Led a project to enhance Hyundai India's supply chain efficiency by establishing regional warehouses, utilizing data analysis and predictive analytics to reduce setup costs by 15% and optimize capacity utilization by 25%.
-- [Excel Sheet](https://docs.google.com/spreadsheets/d/18UJ4VRy4f_G4s9lEJg2CAI8eKjyU_pNt/edit?usp=sharing&ouid=102142818903203710485&rtpof=true&sd=true)
+- [Excel Sheet](https://docs.google.com/spreadsheets/d/1FX9UfoNLiK2TQY5FPBcAwNAlr1N9b6N_/edit?usp=share_link&ouid=102142818903203710485&rtpof=true&sd=true)
 - [Project Link](https://drive.google.com/file/d/1TUsp5dnoX1Qrhrw1maBGTIJj3QP9CMne/view?usp=share_link)
 
 #### Student Course Selection Advisor using Multi-Criteria Decision Making Techniques
 - Developed a personalized course selection solution using Multi-Criteria Decision-Making (MCDM) techniques to enhance student decision-making based on individual abilities, interests, and career aspirations.
-- [Excel Sheets](https://drive.google.com/drive/folders/1FfzrFr_eiFmkGhkNMNwvbUeQbt1CaPAY?usp=sharing)
+- [Excel Sheets](https://docs.google.com/spreadsheets/d/1Pi_oGHjiBxxBSnQOYB9DlZg0VJfaZ3xa/edit?usp=share_link&ouid=102142818903203710485&rtpof=true&sd=true)
 - [Project Link](https://drive.google.com/file/d/1TOwG7nZUquavCpEs8uj9-v3UWwwxvdhc/view?usp=share_link)
 
 #### Product and Brand Audit of iYogi
@@ -94,7 +94,6 @@ Check out a book I authored on data visualization, titled, ["Visualize to Mesmer
 
 #### Understanding the Strategies of DELHIVERY in Emerging Markets
 - Analyzed Delhivery's strategies in emerging markets, focusing on India, and provided strategic recommendations to enhance market positioning, guide future moves, and address potential risks.
-- [GitHub Repo Link](link)
 - [Project Link](https://drive.google.com/file/d/1ThDdwU_YOsGSFpLzJNsod_cwpVD8mDcw/view?usp=share_link)
 
 #### Strategies to curb consumer attrition in the airline industry using data analysis
@@ -104,12 +103,10 @@ Check out a book I authored on data visualization, titled, ["Visualize to Mesmer
 
 #### Financial Analysis of the Mobile & Electronics Industry using Spreadsheet modelling
 - Conducted a financial analysis of five Indian mobile and electronics companies using spreadsheet modeling to assess performance across key metrics and provide data-driven strategic insights.
-- [GitHub Repo Link](link)
 - [Project Link](https://drive.google.com/file/d/1AmEROmgyFzcKPi6PxceLgCXa6RZFUKCB/view?usp=share_link)
 
 #### APV Analysis of Maersk's CapEx
 - Utilized Adjusted Present Value (APV) analysis and the Black-Scholes Formula to evaluate Maersk's CapEx investments, resulting in a $390,819 valuation and enhancing decision-making through a comprehensive risk and return assessment.
-- [GitHub Repo Link](link)
 - [Project Link](https://drive.google.com/file/d/1T6dVlsNExXhKwORf66Hn7vrB8cyjMjC6/view?usp=share_link)
 
 #### Econometrics and Statistics in R
