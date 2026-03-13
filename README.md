@@ -1,18 +1,16 @@
 # Hi there 👋, I'm Dhruv Chowdary
 
 ## About Me
-- 🎓 Recent graduate in MBA Analytics from Indian Institute of Management (IIM) Kashipur
-- 💼 Currently looking for opportunities to build a strong foundation for my career in Data Science and Analytics 
-- 🌱 Learning and exploring Python, R, Tableau, Power BI, Alteryx Designer, AI and Automation in MS Office, Salesforce and Zoho CRM and Figma
+- 💼 Currently working as an AWS Alliance Lead and Senior Associate Consultant @ NeenOpal
+- 🎓 A graduate in MBA Analytics from Indian Institute of Management (IIM) Kashipur
+- 🌱 Learning and exploring Amazon Bedrock, n8n, and other Generative AI and Agentic AI solution enablers.
 - 👯 Open to collaborating on interesting projects
-- 📫 Reach me at [chowdarydhruv7@gmail.com] or connect with me on [https://www.linkedin.com/in/dhruv-chowdary-0911/]
+- 📫 Reach me at [chowdarydhruv7@gmail.com] or connect with me on [https://www.linkedin.com/in/dhruv-chowdary/]
 
 ## Portfolio
 Check out my [portfolio site](https://dchow0911.github.io) to see my projects and learn more about me!
 
-Check out my [digital resume](https://chowdarydhruv7.wixsite.com/myresume) to view my journey so far!
-
-Here is an answer to, [Why Am I your Ideal Candidate?](https://public.tableau.com/views/WhyAmIyourIdealCandidate/WhyMe?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)
+Check out my [digital resume](https://dhruvchowdary.com) to view my journey so far!
 
 Check out a book I authored on data visualization, titled, ["Visualize to Mesmerize: Mastering the Art of data visualization and infographics"](https://dvwithdhruv.wixsite.com/portfolio) Now Available on Amazon and Apple Books as well!
 
